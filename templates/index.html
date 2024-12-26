@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prover</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background-color: #fff;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-axiom {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        .delete-axiom:hover {
+            background-color: #c82333;
+        }
+        .tooltip {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: inline-block;
+            cursor: pointer;
+            font-size: 20px;
+            color: #007bff;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            top: -5px;
+            right: 105%;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        .add-predefined-axioms {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .add-predefined-axioms:hover {
+            background-color: #218838;
+        }
+        .proving-result-success {
+            color: green;
+        }
+        .proving-result-fail {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div class="tooltip">?
+        <span class="tooltiptext">Импликация: &gt;<br>Коньюкция: *<br>Дизъюнкция: |<br>Отрицание: !<br>XOR: +</span>
+    </div>
+    <h1>Prover</h1>
+    <h2>Add Axiom</h2>
+    <form id="axiom-form">
+        <input type="text" id="axiom-input" placeholder="Enter axiom">
+        <button type="submit">Add</button>
+    </form>
+    <button class="add-predefined-axioms" id="add-predefined-axioms">Add Predefined Axioms</button>
+    <h2>Prove Expression</h2>
+    <form id="prove-form">
+        <input type="text" id="prove-input" placeholder="Enter expression">
+        <button type="submit">Prove</button>
+    </form>
+    <button id="show-basic-expressions">Show Basic Expressions</button>
+    <br>
+    <div id="basic-expressions" style="display: none;">
+        <button class="basic-expression">((a*b)>a)</button>
+        <button class="basic-expression">((a*b)>b)</button>
+        <button class="basic-expression">(a>(b>(a*b)))</button>
+        <button class="basic-expression">(a>(a|b))</button>
+        <button class="basic-expression">(b>(a|b))</button>
+        <button class="basic-expression">((a>c)>((b>c)>((a|b)>c)))</button>
+        <button class="basic-expression">(!a>(a>b))</button>
+        <button class="basic-expression">(a|!a)</button>
+    </div>
+    <h2>Axioms</h2>
+    <ul id="axioms-list"></ul>
+    <h2>Proving Result</h2>
+    <div id="proving-result"></div>
+    <h2>Proving Process Output</h2>
+    <ul id="proving-output"></ul>
+    <script>
+        $(document).ready(function() {
+            function loadAxioms() {
+                $.get('/axioms', function(data) {
+                    $('#axioms-list').empty();
+                    data.forEach(function(axiom, index) {
+                        $('#axioms-list').append('<li>' + axiom + ' <button class="delete-axiom" data-index="' + index + '">Delete</button></li>');
+                    });
+                });
+            }
+
+            $('#axiom-form').submit(function(event) {
+                event.preventDefault();
+                $.post('/axioms', { expression: $('#axiom-input').val() }, function(data) {
+                    alert(data.message);
+                    loadAxioms();
+                });
+            });
+
+            $('#prove-form').submit(function(event) {
+                event.preventDefault();
+                $.post('/prove', { expression: $('#prove-input').val() }, function(data) {
+                    alert('Prove result: ' + data.result);
+                    $('#proving-output').empty();
+                    data.output.forEach(function(message) {
+                        $('#proving-output').append('<li>' + message + '</li>');
+                    });
+                    $('#proving-result').text('Prove result: ' + (data.result ? 'Successful' : 'Unsuccessful'))
+                        .removeClass('proving-result-success proving-result-fail')
+                        .addClass(data.result ? 'proving-result-success' : 'proving-result-fail');
+                });
+            });
+
+            $(document).on('click', '.delete-axiom', function() {
+                var index = $(this).data('index');
+                $.ajax({
+                    url: '/axioms/' + index,
+                    type: 'DELETE',
+                    success: function(data) {
+                        alert(data.message);
+                        loadAxioms();
+                    }
+                });
+            });
+
+            $('#add-predefined-axioms').click(function() {
+                const predefinedAxioms = [
+                    '(a>(b>a))',
+                    '((a>(b>c))>((a>b)>(a>c)))',
+                    '((!b>!a)>((!b>a)>b))'
+                ];
+                predefinedAxioms.forEach(function(axiom) {
+                    $.post('/axioms', { expression: axiom }, function(data) {
+                        alert(data.message);
+                        loadAxioms();
+                    });
+                });
+            });
+
+            $('#show-basic-expressions').click(function() {
+                $('#basic-expressions').toggle();
+            });
+
+            $('.basic-expression').click(function() {
+                $('#prove-input').val($(this).text());
+            });
+
+            loadAxioms();
+        });
+    </script>
+</body>
+</html>
