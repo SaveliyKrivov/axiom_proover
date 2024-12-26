@@ -19,6 +19,77 @@ python main.py
 ```
 ![image](https://github.com/user-attachments/assets/26a9334a-4bce-428c-bd92-ba13caeff188)
 
+##Док-во
+План: Перепишу доказательство корректности Modus Ponens, используя стандартные символы и markdown форматирование.
+
+### Определение классического Modus Ponens:
+- Из (A → B) и A следует B
+
+### Определение Modus Ponens в проекте:
+- Из секвента Gamma, (A → B) |- Delta получаем:
+  1. Gamma |- A, Delta
+  2. Gamma, B |- Delta
+
+### Доказательство эквивалентности:
+
+#### Теорема:
+Пусть дан секвент Gamma, (A → B) |- Delta. Тогда следующие утверждения эквивалентны:
+1. Секвент Gamma, (A → B) |- Delta выводим
+2. Хотя бы один из секвентов Gamma |- A, Delta или Gamma, B |- Delta выводим
+
+#### Доказательство:
+
+**Прямое направление =>**
+1. Пусть секвент Gamma, (A → B) |- Delta выводим
+2. По определению (A → B) эквивалентно (not A or B)
+3. Значит, либо (not A) истинно, либо B истинно
+4. Если (not A) истинно, то секвент Gamma |- A, Delta выводим
+5. Если B истинно, то секвент Gamma, B |- Delta выводим
+
+**Обратное направление <=**
+1. Пусть выводим секвент Gamma |- A, Delta
+   - Тогда (not A) истинно
+   - Следовательно, (A → B) истинно
+   - Значит, секвент Gamma, (A → B) |- Delta выводим
+
+2. Пусть выводим секвент Gamma, B |- Delta
+   - Тогда B истинно
+   - Следовательно, (A → B) истинно
+   - Значит, секвент Gamma, (A → B) |- Delta выводим
+
+```python
+def modus_ponens(sequent, expression):
+    """
+    Применение правила modus ponens:
+    Из секвента Gamma, (A → B) |- Delta получаем:
+    1. Gamma |- A, Delta
+    2. Gamma, B |- Delta
+    """
+    new_sequent_a = Sequent(
+        sequent.left.copy(),
+        sequent.right.copy(),
+        sequent.depth + 1
+    )
+    new_sequent_b = Sequent(
+        sequent.left.copy(),
+        sequent.right.copy(),
+        sequent.depth + 1
+    )
+    del new_sequent_a.left[expression]
+    del new_sequent_b.left[expression]
+    new_sequent_a.right[expression.left] = sequent.left[expression] + 1
+    new_sequent_b.left[expression.right] = sequent.left[expression] + 1
+
+    return [new_sequent_a, new_sequent_b]
+```
+
+Где:
+- Gamma - множество формул слева от |-
+- Delta - множество формул справа от |-
+- |- - знак выводимости
+- → - импликация
+- not - отрицание
+
 ## Вывод аксиом A4-11
 A4:
 ```commandline
